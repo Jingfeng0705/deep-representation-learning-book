@@ -1,5 +1,11 @@
-\documentclass{book}
-% \documentclass{EngC}
+% For HTML builds (tex4ht/make4ht), use the standard book class.
+% EngC's internal font-switching machinery is incompatible with tex4ht's
+% character-by-character hooks and breaks CJK processing.
+\ifdefined\HCode
+  \documentclass{book}
+\else
+  \documentclass{EngC}
+\fi
 
 \makeatletter
 \@ifclassloaded{EngC}{
@@ -22,9 +28,25 @@
 \usepackage[UTF8]{ctex}
 
 % Font packages
-\usepackage[utf8]{inputenc}
 \usepackage{bbold}
 \usepackage{pifont}
+
+% Fix bbold missing size ranges under XeLaTeX
+\DeclareFontFamily{U}{bbold}{}
+\DeclareFontShape{U}{bbold}{m}{n}{
+  <-5.5>   bbold5
+  <5.5-6.5> bbold6
+  <6.5-7.5> bbold7
+  <7.5-8.5> bbold8
+  <8.5-9.5> bbold9
+  <9.5-11.5> bbold10
+  <11.5-14.5> bbold12
+  <14.5->   bbold17
+}{}
+
+% Fix missing font shapes for Latin Modern under TU encoding
+\DeclareFontShape{TU}{lmr}{bx}{sc}{<->ssub*lmr/bx/n}{}
+\DeclareFontShape{TU}{lmss}{m}{sc}{<->ssub*lmss/m/n}{}
 
 % Math packages
 \usepackage{amsmath}
@@ -122,6 +144,14 @@ cambridgemods baseline-skip author authors cambridgestyle en-vir-on-ment polar}
 \usepackage[shortlabels]{enumitem}
 \setlist[enumerate]{label=\arabic*., leftmargin=*}
 \usepackage{fancyvrb}
+% soul is only needed for EngC's \spacedheader; skip under tex4ht (book class)
+\makeatletter
+\@ifclassloaded{EngC}{
+    \usepackage{soul}
+    % Override EngC's \spacedheader to avoid soul errors with CJK characters
+    \AtBeginDocument{\renewcommand{\spacedheader}[1]{#1}}
+}{}
+\makeatother
 \VerbatimFootnotes
 \allowdisplaybreaks
 
@@ -176,6 +206,78 @@ cambridgemods baseline-skip author authors cambridgestyle en-vir-on-ment polar}
         \vspace{6em}\footnotesize $^*$\, 这些作者对本书贡献相等。% These authors contributed equally.
     }
 }
+\makeatother
+
+% EngC-specific: dot leaders in TOC, authorfooter, and custom maketitle.
+% These use EngC internals (\AJW@toclmarg, \boldseriffont, \parttitlesize, etc.)
+% and must be skipped when using the standard book class (HTML builds).
+\makeatletter
+\@ifclassloaded{EngC}{
+  \newcommand{\AJW@tocleaders}{\leaders\hbox{$\m@th
+    \mkern \@dotsep mu\hbox{.}\mkern \@dotsep mu$}\hfill}
+  \def\@dottedtocline#1#2#3#4#5{%
+   \ifnum #1>\c@tocdepth
+   \else
+    \vskip \z@ \@plus .2\p@
+    {\leftskip #2\relax
+     \rightskip \@tocrmarg \@plus2em
+     \parfillskip -\rightskip
+     \parindent #2\relax
+     \@afterindenttrue
+     \interlinepenalty\@M
+     \leavevmode
+     \@tempdima #3\relax \advance\leftskip \@tempdima \hbox{}\hskip -\leftskip
+     #4\nobreak
+     \AJW@tocleaders \nobreak
+     \hbox to\@pnumwidth{\hfil\rm #5}\par}%
+   \fi}
+  \renewcommand*\l@chapter[2]{\pagebreak[3]
+   \vspace{\baselineskip}%
+   \@tempdima \AJW@toclmarg
+   \begingroup
+    \parindent -4pc
+      \rightskip \@pnumwidth  \parfillskip -\@pnumwidth
+    \leavevmode
+    \advance \leftskip \@tempdima  \hskip -\leftskip
+    {\normalfont\boldseriffont #1}\nobreak
+    \AJW@tocleaders \nobreak
+    \hbox to\@pnumwidth{\hss #2}\par
+   \endgroup}
+  % Storage for title-page footer (disclaimer, copyright, equal-contribution note)
+  \gdef\@authorfooter{}
+  \newcommand{\authorfooter}[1]{\gdef\@authorfooter{#1}}
+  % Centered title page with rule
+  \def\maketitle{\openin1 \jobname.ttl
+   \ifeof1
+    \typeout{No file \jobname.ttl.}
+    \begin{titlepage}
+     \centering
+     \vspace*{2\p@}
+     {\parttitlesize\boldseriffont \@title \par}
+     \if\@subtitle\empty\else \vskip 14\p@ {\subtitlesize\@subtitle \par} \fi
+     \vskip 10\p@
+     \rule{\textwidth}{0.5pt}\par
+     \vspace{24\p@}
+     {\authorsize\seriffont
+       \ifAJW@multisty {\itshape Edited by} \\ \fi
+       \@author
+       \par}
+     \vfill
+     {\footnotesize \@authorfooter \par}
+    \end{titlepage}
+    \cleardoublepage
+   \else
+    \closein1 \relax\@@input \jobname.ttl
+   \fi
+   \setcounter{footnote}{0}
+   \let\thanks\relax
+   \gdef\@thanks{}
+   \gdef\@author{}
+   \gdef\@shortauthor{}
+   \gdef\@title{}
+   \let\maketitle\relax
+  }
+}{}
 \makeatother
 
 \begin{document}
@@ -254,7 +356,7 @@ cambridgemods baseline-skip author authors cambridgestyle en-vir-on-ment polar}
 \phantomsection\addcontentsline{toc}{chapter}{\numberline{}前言}
 \subfile{chapters/preface/preface_zh.tex}
 
-\phantomsection\addcontentsline{toc}{chapter}{\numberline{}2.0版前言}
+\phantomsection\addcontentsline{toc}{chapter}{\numberline{}第二版前言}
 \subfile{chapters/preface/preface-v2_zh.tex}
 
 \phantomsection\addcontentsline{toc}{chapter}{\numberline{}开源声明}
@@ -311,8 +413,8 @@ cambridgemods baseline-skip author authors cambridgestyle en-vir-on-ment polar}
 
 \addtocontents{toc}{\vspace{\baselineskip}}
 
-\addcontentsline{toc}{chapter}{参考文献}
-\printbibliography[heading=none]
+\addcontentsline{toc}{chapter}{Bibliography}
+\printbibliography
 
 % \printindex{authors}{Author index}
 % \printindex{subject}{Subject index}
