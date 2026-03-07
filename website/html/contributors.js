@@ -69,13 +69,19 @@
             id: "shenghua-gao",
             name: "Shenghua Gao",
             url: "https://datascience.hku.hk/people/shenghua-gao/",
-            affil: "ShanghaiTech University",
+            affil: "University of Hong Kong",
         },
         {
             id: "bingbing-huang",
             name: "Bingbing Huang",
             url: "https://scholar.google.com/citations?user=5da8iKwAAAAJ&hl=en-US",
             affil: "University of Hong Kong",
+        },
+        {
+            id: "bill-mark",
+            name: "Bill Mark",
+            url: "https://www.linkedin.com/in/bill-mark-a51142/",
+            affil: "Independent",
         },
         {
             id: "kerui-min",
@@ -98,8 +104,8 @@
         {
             id: "shengbang-tong",
             name: "Shengbang Tong",
-            url: "New York University",
-            affil: "https://tsb0601.github.io/",
+            url: "https://tsb0601.github.io/",
+            affil: "New York University",
         },
         {
             id: "jeroen-van-goey",

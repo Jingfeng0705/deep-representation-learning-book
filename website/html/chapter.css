@@ -34,21 +34,27 @@ h2 {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 1.5em 0 0.5em;
-  color: var(--text);
 }
 
 h3 {
   font-size: 1.2rem;
-  font-weight: 600;
   margin: 1.25em 0 0.4em;
-  color: var(--text);
 }
 
 h4 {
   font-size: 1.05rem;
-  font-weight: 600;
   margin: 1em 0 0.3em;
+}
+
+h2,
+h3,
+h4 {
   color: var(--text);
+}
+
+h3,
+h4 {
+  font-weight: 600;
 }
 
 /* ===== Paragraphs and text ===== */
@@ -79,6 +85,15 @@ table.equation {
   width: 100%;
 }
 
+.mathjax-env,
+.equation,
+table.equation {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Equation number tags */
 td.equation-label {
   color: var(--muted);
@@ -93,14 +108,11 @@ td.equation-label {
   margin: 0.5em 0;
   overflow-x: auto;
   overflow-y: hidden;
+  scrollbar-width: none;
 }
 
 .katex-display::-webkit-scrollbar {
   display: none;
-}
-
-.katex-display {
-  scrollbar-width: none;
 }
 
 /* Ensure KaTeX inline doesn't break layout */
@@ -215,8 +227,7 @@ td.equation-label {
   margin-bottom: 12px;
 }
 
-.algorithm-container figure,
-.algorithm-container .algorithmic {
+.algorithm-container :is(figure, .algorithmic) {
   text-align: left;
 }
 
@@ -226,9 +237,7 @@ td.equation-label {
 }
 
 /* Remove generic figure card styling from algorithm inner wrapper */
-.algorithm-container figure,
-.algorithm-container .figure,
-.algorithm-container div.figure {
+.algorithm-container :is(figure, .figure, div.figure) {
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -243,10 +252,125 @@ td.equation-label {
     "Liberation Mono", monospace;
   font-size: 0.95rem;
   line-height: 1.5;
+  display: grid;
+  gap: 0.25rem;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .algorithmic .ALIndent {
   padding-left: 1.5em;
+}
+
+.algorithmic-line {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: start;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.algorithmic-line-blank {
+  min-height: 0.45rem;
+}
+
+.algorithmic-label,
+.algorithmic-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.algorithmic-label {
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 4.5em;
+  width: max-content;
+  text-align: right;
+}
+
+.algorithmic-label > :is(.label, [class^="label-"], [class*=" label-"]) {
+  display: inline-block;
+}
+
+.algorithmic-content {
+  box-sizing: border-box;
+  padding-left: var(--algorithm-indent, 0);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.algorithmic-inline-math {
+  display: inline;
+  max-width: none;
+  overflow: visible;
+  white-space: normal;
+  vertical-align: baseline;
+}
+
+.algorithmic-inline-math mjx-container {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.algorithmic-content > .algorithmic-inline-math:only-child {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  vertical-align: middle;
+  -webkit-overflow-scrolling: touch;
+}
+
+.algorithmic-content > .algorithmic-inline-math:only-child mjx-container {
+  max-width: none;
+}
+
+/* Fallback for pre-normalized algorithm HTML that still wraps a line in span.line. */
+.algorithmic-content > .line {
+  display: inline-block;
+  min-width: 100%;
+  max-width: none;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.algorithmic-content > .line .algorithmic-inline-math,
+.algorithmic-content > .line mjx-container {
+  max-width: none;
+}
+
+.algorithmic-content :is(.algorithmic-block-math, .mathjax-env, .equation, table.equation, .katex-display) {
+  box-sizing: border-box;
+  display: block;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.35rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.algorithmic-content mjx-container[display="true"] {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.algorithmic-content > :first-child {
+  margin-top: 0;
+}
+
+.algorithmic-content > :last-child {
+  margin-bottom: 0;
 }
 
 /* Algorithm keywords */
@@ -259,9 +383,7 @@ td.equation-label {
 }
 
 /* ===== Figures and tables ===== */
-figure,
-.figure,
-div.figure {
+:is(figure, .figure, div.figure) {
   position: relative;
   background: #fff;
   border: 1px solid var(--border);
@@ -282,51 +404,37 @@ figure img {
 }
 
 /* make4ht often emits multi-image figures as <figure><p class="noindent"><img ... */
-figure > p.noindent,
-.figure > p.noindent,
-div.figure > p.noindent {
+:is(figure, .figure, div.figure) > p.noindent {
   text-align: center;
   margin: 0;
 }
 
-figure > p.noindent > img,
-.figure > p.noindent > img,
-div.figure > p.noindent > img {
+:is(figure, .figure, div.figure) > p.noindent > img {
   display: inline-block;
   vertical-align: top;
 }
 
-figure > p.noindent > img + img,
-.figure > p.noindent > img + img,
-div.figure > p.noindent > img + img {
+:is(figure, .figure, div.figure) > p.noindent > img + img {
   margin-left: 12px;
 }
 
 /* Some make4ht figures wrap image rows as <figure><div class="center"><p class="noindent"><img ... */
-figure .center > p.noindent,
-.figure .center > p.noindent,
-div.figure .center > p.noindent {
+:is(figure, .figure, div.figure) .center > p.noindent {
   text-align: center;
   margin: 0;
 }
 
-figure .center > p.noindent > img,
-.figure .center > p.noindent > img,
-div.figure .center > p.noindent > img {
+:is(figure, .figure, div.figure) .center > p.noindent > img {
   display: inline-block;
   vertical-align: top;
 }
 
-figure .center > p.noindent > img + img,
-.figure .center > p.noindent > img + img,
-div.figure .center > p.noindent > img + img {
+:is(figure, .figure, div.figure) .center > p.noindent > img + img {
   margin-left: 12px;
 }
 
 /* Multi-panel figure layouts emitted by make4ht */
-figure .figure-row,
-.figure .figure-row,
-div.figure .figure-row {
+:is(figure, .figure, div.figure) .figure-row {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -335,33 +443,61 @@ div.figure .figure-row {
   margin: 0;
 }
 
-figure .figure-row-item,
-.figure .figure-row-item,
-div.figure .figure-row-item {
+:is(figure, .figure, div.figure) .figure-row-item {
   flex: 1 1 220px;
   max-width: 520px;
   width: 100% !important;
   margin: 0;
 }
 
-figure.subfigure-grid,
-.figure.subfigure-grid,
-div.figure.subfigure-grid {
+:is(figure, .figure, div.figure).subfigure-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(var(--subfigure-count, 1), minmax(0, 1fr));
   gap: 12px 16px;
   align-items: start;
+  justify-items: center;
+  position: relative;
 }
 
-figure.subfigure-grid > .subfigure-item,
-.figure.subfigure-grid > .subfigure-item,
-div.figure.subfigure-grid > .subfigure-item {
+:is(figure, .figure, div.figure).subfigure-grid > .subfigure-item {
+  margin: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+:is(figure, .figure, div.figure).subfigure-grid > :not(.subfigure-item):not(.caption) {
+  grid-column: 1 / -1;
   margin: 0;
 }
 
-figure.subfigure-grid > .caption,
-.figure.subfigure-grid > .caption,
-div.figure.subfigure-grid > .caption {
+:is(figure, .figure, div.figure).subfigure-grid > [id]:not(.subfigure-item):not(.caption) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+:is(figure, .figure, div.figure).subfigure-grid > .subfigure-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+:is(figure, .figure, div.figure).subfigure-grid > .subfigure-grid-meta {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+:is(figure, .figure, div.figure).subfigure-grid > .caption {
   grid-column: 1 / -1;
 }
 
@@ -399,6 +535,64 @@ table thead th {
 .itemize {
   margin: 0.5em 0;
   padding-left: 1.5em;
+}
+
+ul.itemize1,
+ol.enumerate1,
+dl.enumerate-enumitem,
+.theorem-env,
+.algorithm-container,
+.tcolorbox,
+.tcolorbox-content,
+.mini-toc,
+figcaption.caption,
+div.caption {
+  max-width: 100%;
+  min-width: 0;
+}
+
+ul.itemize1 {
+  padding-left: 1.4em;
+}
+
+li.itemize,
+dd.enumerate-enumitem,
+.theorem-env,
+.algorithm-container,
+.tcolorbox-content,
+.tcolorbox-content p,
+.mini-toc a,
+figcaption.caption,
+div.caption {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.algorithmic,
+.algorithmic-content,
+.algorithmic-content p,
+.algorithmic-content li,
+.algorithmic-content dd {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+dl.enumerate-enumitem {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 0.6rem;
+  row-gap: 0.4rem;
+  align-items: start;
+  margin: 0.75em 0;
+}
+
+dt.enumerate-enumitem,
+dd.enumerate-enumitem {
+  margin: 0;
+}
+
+dt.enumerate-enumitem {
+  white-space: nowrap;
 }
 
 /* ===== tcolorbox callout ===== */
@@ -567,7 +761,9 @@ pre,
     left: 0;
   }
 
-  h2, h3, h4 {
+  h2,
+  h3,
+  h4 {
     position: relative;
   }
 }
@@ -599,16 +795,18 @@ pre,
     padding: 3px 12px;
   }
 
-  figure .figure-row-item,
-  .figure .figure-row-item,
-  div.figure .figure-row-item {
+  :is(figure, .figure, div.figure) .figure-row-item {
     flex-basis: 100%;
     max-width: 100%;
   }
 
-  figure.subfigure-grid,
-  .figure.subfigure-grid,
-  div.figure.subfigure-grid {
+  :is(figure, .figure, div.figure).subfigure-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  :is(figure, .figure, div.figure).subfigure-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -617,7 +815,7 @@ pre,
   .chapter-content {
     font-size: 0.94rem;
     line-height: 1.5;
-    padding: 6px 8px 16px;
+    padding: 10px clamp(16px, 4vw, 22px) 20px;
   }
 
   h1 {
@@ -626,6 +824,10 @@ pre,
 
   h2 {
     font-size: 1.15rem;
+  }
+
+  .algorithmic-line {
+    column-gap: 0.5rem;
   }
 
   .mini-toc {
@@ -646,7 +848,7 @@ pre,
 @media (max-width: 414px) {
   .chapter-content {
     font-size: 0.92rem;
-    padding: 6px 6px 12px;
+    padding: 8px clamp(14px, 4vw, 18px) 16px;
   }
 
   h1 {
@@ -664,7 +866,7 @@ pre,
 
 @media (max-width: 375px) {
   .chapter-content {
-    padding: 4px 4px 10px;
+    padding: 8px 12px 14px;
     font-size: 0.9rem;
   }
 }

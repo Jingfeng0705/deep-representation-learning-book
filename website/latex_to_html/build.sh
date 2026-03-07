@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# build.sh — Orchestrates the make4ht + MathJax pipeline.
+# build.sh — Build PDF + HTML from a TeX file in an isolated temp directory.
 #
 # Usage: bash website/latex_to_html/build.sh [tex_file] [output_dir]
 #
 # Arguments:
 #   tex_file    TeX source file (default: book-main.tex)
-#   output_dir  Final HTML output directory (default: website/html)
+#   output_dir  Final output directory for HTML + PDF (default: website/html)
 #
-# Stages:
-#   1. Run make4ht → _build_{base}/
-#   2. Generate MathJax macros from .sty files → macros.json
-#   3. Inject macros into MathJax config in each HTML file
-#   4. Post-process: rename, inject CSS/JS, mini-TOC, search index → output_dir/
+# The build runs in a temp directory named after the TeX file, allowing
+# parallel builds of different files without collisions. The PDF is placed
+# at $output_dir/$tex_base.pdf alongside the HTML output.
+#
+# Set KEEP_BUILD_DIR=1 to preserve the temp directory for debugging.
 
 set -euo pipefail
 
@@ -23,164 +23,210 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PIPELINE_DIR="$SCRIPT_DIR"
 
 TEX_FILE="${1:-book-main.tex}"
-TEX_PATH="$REPO_ROOT/$TEX_FILE"
-TEX_BASE="$(basename "$TEX_FILE" .tex)"
+if [[ "$TEX_FILE" = /* ]]; then
+    case "$TEX_FILE" in
+    "$REPO_ROOT"/*) TEX_REL="${TEX_FILE#$REPO_ROOT/}" ;;
+    *)
+        echo "Error: tex_file must be inside the repository: $TEX_FILE" >&2
+        exit 1
+        ;;
+    esac
+else
+    TEX_REL="$TEX_FILE"
+fi
+TEX_BASE="$(basename "$TEX_REL" .tex)"
 
 OUTPUT_DIR="${2:-$REPO_ROOT/website/html}"
-# Make output_dir absolute if relative
 [[ "$OUTPUT_DIR" != /* ]] && OUTPUT_DIR="$REPO_ROOT/$OUTPUT_DIR"
 
-BUILD_DIR="$REPO_ROOT/website/_build_${TEX_BASE}"
-REF_AUX="$BUILD_DIR/reference.aux"
+# Create temp build directory named after the tex file (parallel-safe)
+BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/build-${TEX_BASE}-XXXXXX")"
+cleanup() {
+    if [ "${KEEP_BUILD_DIR:-}" = "1" ]; then
+        echo "Build dir preserved: $BUILD_DIR"
+    else
+        rm -rf "$BUILD_DIR"
+    fi
+}
+trap cleanup EXIT
 
-CFG_FILE="$PIPELINE_DIR/book.cfg"
-MK4_FILE="$PIPELINE_DIR/book.mk4"
-MACROS_JSON="$BUILD_DIR/macros.json"
+SOURCE_DIR="$BUILD_DIR/source"
+MAKE4HT_DIR="$BUILD_DIR/make4ht_raw"
+MACROS_DIR="$BUILD_DIR/macros"
+MATHJAX_DIR="$BUILD_DIR/mathjax_injected"
+POST_INPUT_DIR="$BUILD_DIR/postprocess_input"
+POST_OUTPUT_DIR="$BUILD_DIR/postprocess_output"
 
 echo "=========================================="
-echo "make4ht + MathJax Pipeline"
+echo "Build Pipeline (PDF + HTML)"
 echo "=========================================="
 echo "  Repo root:   $REPO_ROOT"
-echo "  TeX file:    $TEX_FILE"
+echo "  TeX file:    $TEX_REL"
 echo "  Build dir:   $BUILD_DIR"
 echo "  Output dir:  $OUTPUT_DIR"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Pre-build: capture a full LaTeX .aux for eqref fallback
+# Stage 0: Create source snapshot
 # ---------------------------------------------------------------------------
-# tex4ht can miss some align labels (and older CI tex4ht can miss many refs).
-# Keep a standard LaTeX-generated .aux snapshot before make4ht runs so the
-# postprocessor can recover unresolved \eqref entries.
-mkdir -p "$BUILD_DIR"
-AUX_PATH="$REPO_ROOT/${TEX_BASE}.aux"
+echo "[Stage 0] Creating source snapshot..."
+mkdir -p "$SOURCE_DIR" "$MAKE4HT_DIR" "$MACROS_DIR" \
+    "$MATHJAX_DIR" "$POST_INPUT_DIR" "$POST_OUTPUT_DIR"
 
-echo "[Pre-build] Capturing reference AUX..."
-if [ -f "$AUX_PATH" ] && ! grep -q '\\ifx\\rEfLiNK\\UnDef' "$AUX_PATH"; then
-    cp "$AUX_PATH" "$REF_AUX"
-    echo "  Using existing LaTeX aux: $AUX_PATH"
-else
-    if [ -f "$AUX_PATH" ]; then
-        echo "  Existing aux appears tex4ht-generated; regenerating via latexmk..."
-    else
-        echo "  No aux found; generating via latexmk..."
-    fi
+rsync -a \
+    --exclude=".git/" \
+    --exclude="website/_build_*/" \
+    --exclude="website/html/" \
+    "$REPO_ROOT/" "$SOURCE_DIR/"
 
-    if latexmk -pdf -interaction=nonstopmode -shell-escape -f "$TEX_PATH" >/dev/null 2>&1; then
-        if [ -f "$AUX_PATH" ]; then
-            cp "$AUX_PATH" "$REF_AUX"
-            echo "  Generated reference aux: $REF_AUX"
-        else
-            echo "  Warning: latexmk completed but $AUX_PATH was not found."
-        fi
-    else
-        echo "  Warning: latexmk aux generation failed; eqref fallback may be limited."
-    fi
+SNAPSHOT_TEX="$SOURCE_DIR/$TEX_REL"
+if [ ! -f "$SNAPSHOT_TEX" ]; then
+    echo "Error: TeX file not found: $SNAPSHOT_TEX" >&2
+    exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# Pre-build: clean stale tex4ht artifacts from repo root
-# ---------------------------------------------------------------------------
-# make4ht writes .xref, .4ct, .4tc, .idv, .lg files to the repo root.
-# Stale versions from a previous (possibly failed) run can poison the
-# next build — e.g. malformed .xref entries cause immediate parse errors.
-echo "[Pre-build] Cleaning stale tex4ht artifacts..."
-rm -f "$REPO_ROOT/${TEX_BASE}".{xref,4ct,4tc,idv,lg}
-# Keep the captured reference AUX, but force tex4ht to start from a clean aux
-# in the repo root to avoid stale-marker contamination across runs.
-rm -f "$AUX_PATH"
 # ---------------------------------------------------------------------------
 # Pre-build: ensure XeTeX format has enough main_memory
 # ---------------------------------------------------------------------------
-# The XeTeX format bakes main_memory at build time; the repo texmf.cnf
-# sets a larger value.  Rebuild a user-level xelatex.fmt if needed so
-# make4ht (which uses xelatex) has enough memory for CJK + tex4ht.
-# Uses a temp dir for the probe so parallel builds don't collide.
-export TEXMFCNF="$REPO_ROOT:"
+export TEXMFCNF="$SOURCE_DIR:"
 
 NEEDED_MEM=$(kpsewhich --var-value main_memory 2>/dev/null || echo 0)
 PROBE_DIR=$(mktemp -d)
-ACTUAL_MEM=$(cd "$PROBE_DIR" \
-    && xelatex -interaction=batchmode '\tracingstats=1 \stop' >/dev/null 2>&1 \
-    && grep -o 'out of [0-9]*' texput.log 2>/dev/null | grep -o '[0-9]*' || echo 0)
+ACTUAL_MEM=$(cd "$PROBE_DIR" &&
+    xelatex -interaction=batchmode '\tracingstats=1 \stop' >/dev/null 2>&1 &&
+    grep -o 'out of [0-9]*' texput.log 2>/dev/null | grep -o '[0-9]*' || echo 0)
 rm -rf "$PROBE_DIR"
+
+echo "[Pre-build] main_memory: needed=$NEEDED_MEM actual=$ACTUAL_MEM"
 
 if [ "$ACTUAL_MEM" -lt "$NEEDED_MEM" ] 2>/dev/null; then
     echo "[Pre-build] Rebuilding xelatex format (main_memory $ACTUAL_MEM -> $NEEDED_MEM)..."
-    fmtutil-user --byfmt xelatex >/dev/null 2>&1
+    fmtutil-user --byfmt xelatex
 fi
 
 # ---------------------------------------------------------------------------
-# Stage 1: make4ht
+# Stage 1: Build PDF
 # ---------------------------------------------------------------------------
-echo "[Stage 1] Running make4ht..."
-cd "$REPO_ROOT"
+echo "[Stage 1] Building PDF..."
+(
+    cd "$SOURCE_DIR"
+    latexmk -pdf -interaction=nonstopmode -shell-escape -f "$TEX_REL" || true
+)
 
-# Run make4ht with XeTeX engine, mathjax passthrough, chapter splitting
-make4ht -x -u -s \
-    -c "$CFG_FILE" \
-    -e "$MK4_FILE" \
-    -d "$BUILD_DIR/" \
-    "$TEX_PATH" \
-    "html,mathjax,2,fn-in" \
-    "" \
-    "" \
-    "-shell-escape"
+PDF_FILE="$SOURCE_DIR/${TEX_BASE}.pdf"
+if [ -f "$PDF_FILE" ]; then
+    echo "  PDF built successfully"
+else
+    echo "  Warning: PDF was not produced"
+fi
 
-echo "  make4ht output in $BUILD_DIR/"
-echo "  Files: $(ls "$BUILD_DIR"/*.html 2>/dev/null | wc -l) HTML files"
+# ---------------------------------------------------------------------------
+# Stage 2: Capture reference AUX (from PDF build) for eqref fallback
+# ---------------------------------------------------------------------------
+echo "[Stage 2] Capturing reference AUX..."
+SNAPSHOT_AUX="$(dirname "$SNAPSHOT_TEX")/${TEX_BASE}.aux"
+REF_AUX="$BUILD_DIR/reference.aux"
+
+if [ -f "$SNAPSHOT_AUX" ] && ! grep -q '\\ifx\\rEfLiNK\\UnDef' "$SNAPSHOT_AUX"; then
+    cp "$SNAPSHOT_AUX" "$REF_AUX"
+    echo "  Using AUX from PDF build"
+else
+    echo "  Warning: no usable AUX; eqref fallback may be limited"
+fi
+
+# ---------------------------------------------------------------------------
+# Stage 3: make4ht
+# ---------------------------------------------------------------------------
+echo "[Stage 3] Running make4ht..."
+CFG_FILE="$PIPELINE_DIR/book.cfg"
+MK4_FILE="$PIPELINE_DIR/book.mk4"
+(
+    cd "$SOURCE_DIR"
+    make4ht -x -u -s \
+        -c "$CFG_FILE" \
+        -e "$MK4_FILE" \
+        -d "$MAKE4HT_DIR/" \
+        "$SNAPSHOT_TEX" \
+        "html,mathjax,2,fn-in" \
+        "" \
+        "" \
+        "-shell-escape"
+)
+
+echo "  make4ht output: $(ls "$MAKE4HT_DIR"/*.html 2>/dev/null | wc -l) HTML files"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Stage 2: Generate MathJax macros
+# Stage 4: Generate MathJax macros
 # ---------------------------------------------------------------------------
-echo "[Stage 2] Generating MathJax macros..."
-cd "$REPO_ROOT"
+echo "[Stage 4] Generating MathJax macros..."
+MACROS_JSON="$MACROS_DIR/macros.json"
 
-uv run python3 "$PIPELINE_DIR/generate_macros.py" \
+(cd "$REPO_ROOT" && uv run python3 "$PIPELINE_DIR/generate_macros.py" \
     "$MACROS_JSON" \
-    "$REPO_ROOT/math-macros.sty" \
-    "$REPO_ROOT/book-macros.sty" \
-    "$REPO_ROOT/chapters"
+    "$SOURCE_DIR/math-macros.sty" \
+    "$SOURCE_DIR/book-macros.sty" \
+    "$SOURCE_DIR/chapters")
 
 echo "  Macros written to $MACROS_JSON"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Stage 3: Inject macros into MathJax config
+# Stage 5: Inject macros into copied HTML
 # ---------------------------------------------------------------------------
-echo "[Stage 3] Injecting MathJax macros..."
+echo "[Stage 5] Injecting MathJax macros..."
 
-uv run python3 "$PIPELINE_DIR/inject_mathjax_macros.py" "$BUILD_DIR" "$MACROS_JSON"
+rsync -a --delete "$MAKE4HT_DIR/" "$MATHJAX_DIR/"
+
+(cd "$REPO_ROOT" && uv run python3 "$PIPELINE_DIR/inject_mathjax_macros.py" \
+    "$MATHJAX_DIR" "$MACROS_JSON")
 
 echo ""
 
 # ---------------------------------------------------------------------------
-# Stage 4: Post-processing
+# Stage 6: Post-processing
 # ---------------------------------------------------------------------------
-echo "[Stage 4] Post-processing..."
+echo "[Stage 6] Post-processing..."
 
-uv run python3 "$PIPELINE_DIR/postprocess.py" \
-    --input "$BUILD_DIR" \
-    --output "$OUTPUT_DIR" \
-    --aux "$REF_AUX"
+rsync -a --delete "$MATHJAX_DIR/" "$POST_INPUT_DIR/"
+
+(cd "$REPO_ROOT" && uv run python3 "$PIPELINE_DIR/postprocess.py" \
+    --input "$POST_INPUT_DIR" \
+    --output "$POST_OUTPUT_DIR" \
+    --aux "$REF_AUX" \
+    --shared-asset-prefix "")
 
 echo ""
 
 # ---------------------------------------------------------------------------
-# Cleanup: remove stale make4ht outputs from repo root (generated despite -d flag)
+# Stage 7: Publish to output directory
 # ---------------------------------------------------------------------------
-echo "[Cleanup] Removing stale make4ht artifacts from repo root..."
-rm -f "$REPO_ROOT/${TEX_BASE}"*.html \
-      "$REPO_ROOT/${TEX_BASE}"*.svg \
-      "$REPO_ROOT/${TEX_BASE}".css \
-      "$REPO_ROOT/${TEX_BASE}".tmp
+echo "[Stage 7] Publishing to $OUTPUT_DIR..."
+mkdir -p "$OUTPUT_DIR"
+rsync -a "$POST_OUTPUT_DIR/" "$OUTPUT_DIR/"
 
-# Remove make4ht's dash-suffixed PNGs from source chapter directories
-echo "[Cleanup] Removing *-.png from source chapter directories..."
-find "$REPO_ROOT/chapters" -name '*-.png' -delete 2>/dev/null || true
+# Copy PDF to output directory
+if [ -f "$PDF_FILE" ]; then
+    cp "$PDF_FILE" "$OUTPUT_DIR/${TEX_BASE}.pdf"
+    echo "  PDF: $OUTPUT_DIR/${TEX_BASE}.pdf"
+fi
+
+# Keep chapter assets resolvable when publishing to non-default output paths.
+SHARED_ASSETS_DIR="$REPO_ROOT/website/html"
+for file in common.css chapter.css common.js chapter.js; do
+    if [ -f "$SHARED_ASSETS_DIR/$file" ] && [ "$SHARED_ASSETS_DIR/$file" != "$OUTPUT_DIR/$file" ]; then
+        cp "$SHARED_ASSETS_DIR/$file" "$OUTPUT_DIR/$file"
+    fi
+done
+if [ -d "$SHARED_ASSETS_DIR/assets" ] && [ "$SHARED_ASSETS_DIR/assets" != "$OUTPUT_DIR/assets" ]; then
+    mkdir -p "$OUTPUT_DIR/assets"
+    rsync -a "$SHARED_ASSETS_DIR/assets/" "$OUTPUT_DIR/assets/"
+fi
 
 echo "=========================================="
-echo "Pipeline complete!"
-echo "Output: $OUTPUT_DIR/"
+echo "Build complete!"
+echo "  HTML: $OUTPUT_DIR/"
+if [ -f "$PDF_FILE" ]; then
+    echo "  PDF:  $OUTPUT_DIR/${TEX_BASE}.pdf"
+fi
 echo "=========================================="
