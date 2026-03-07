@@ -25,11 +25,11 @@ PIPELINE_DIR="$SCRIPT_DIR"
 TEX_FILE="${1:-book-main.tex}"
 if [[ "$TEX_FILE" = /* ]]; then
     case "$TEX_FILE" in
-        "$REPO_ROOT"/*) TEX_REL="${TEX_FILE#$REPO_ROOT/}" ;;
-        *)
-            echo "Error: tex_file must be inside the repository: $TEX_FILE" >&2
-            exit 1
-            ;;
+    "$REPO_ROOT"/*) TEX_REL="${TEX_FILE#$REPO_ROOT/}" ;;
+    *)
+        echo "Error: tex_file must be inside the repository: $TEX_FILE" >&2
+        exit 1
+        ;;
     esac
 else
     TEX_REL="$TEX_FILE"
@@ -71,7 +71,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[Stage 0] Creating source snapshot..."
 mkdir -p "$SOURCE_DIR" "$MAKE4HT_DIR" "$MACROS_DIR" \
-         "$MATHJAX_DIR" "$POST_INPUT_DIR" "$POST_OUTPUT_DIR"
+    "$MATHJAX_DIR" "$POST_INPUT_DIR" "$POST_OUTPUT_DIR"
 
 rsync -a \
     --exclude=".git/" \
@@ -92,14 +92,16 @@ export TEXMFCNF="$SOURCE_DIR:"
 
 NEEDED_MEM=$(kpsewhich --var-value main_memory 2>/dev/null || echo 0)
 PROBE_DIR=$(mktemp -d)
-ACTUAL_MEM=$(cd "$PROBE_DIR" \
-    && xelatex -interaction=batchmode '\tracingstats=1 \stop' >/dev/null 2>&1 \
-    && grep -o 'out of [0-9]*' texput.log 2>/dev/null | grep -o '[0-9]*' || echo 0)
+ACTUAL_MEM=$(cd "$PROBE_DIR" &&
+    xelatex -interaction=batchmode '\tracingstats=1 \stop' >/dev/null 2>&1 &&
+    grep -o 'out of [0-9]*' texput.log 2>/dev/null | grep -o '[0-9]*' || echo 0)
 rm -rf "$PROBE_DIR"
+
+echo "[Pre-build] main_memory: needed=$NEEDED_MEM actual=$ACTUAL_MEM"
 
 if [ "$ACTUAL_MEM" -lt "$NEEDED_MEM" ] 2>/dev/null; then
     echo "[Pre-build] Rebuilding xelatex format (main_memory $ACTUAL_MEM -> $NEEDED_MEM)..."
-    fmtutil-user --byfmt xelatex >/dev/null 2>&1
+    fmtutil-user --byfmt xelatex
 fi
 
 # ---------------------------------------------------------------------------
