@@ -727,7 +727,7 @@ correlations among pixel values. This redundancy allows us to
 recognize easily whether an image is noisy or clean, as shown in
 \Cref{fig:noise-image} (middle and right). Consequently, the
 distribution of natural images has a very low intrinsic dimension
-relative to the total number of pixels.
+relative to the total number of pixels. 
 
 \begin{figure}
     \centering
@@ -748,10 +748,10 @@ Low-Dimensional Models: Principles, Computation, and Applications}
     data in high-dimensional spaces is one of the most fundamental
     problems that, through a long history, interweaves many engineering
     and mathematical fields such as system theory, signal processing,
-pattern recognition, machine learning, and statistics.}''
+pattern recognition, machine learning, and statistics.}'' 
 
 By constraining the observed data point $\vx$ to lie on a
-low-dimensional surface, we make its entries highly dependent on or
+low-dimensional surface or submanifold, we make its entries highly dependent on or
 correlated to one another and, in a sense, ``predictable'' from the
 values of other entries. For example, if we know the data are
 constrained to a $d$-dimensional surface in $\R^D$, we can perform
@@ -797,7 +797,8 @@ or randomness. In this case, we may assume the data follow a
 probability distribution with density \(p(\vx)\). A distribution is
 considered ``low-dimensional'' if its density concentrates around a
 low-dimensional geometric structure---a subspace, a surface, or a
-mixture thereof---as shown in \Cref{fig:mixture-models}. Once
+mixture thereof---as shown in \Cref{fig:mixture-models}. This structure
+is also called the ``support'' of the distribution. Once
 learned, such a density \(p(\vx)\) serves as a powerful prior for
 estimating \(\vx\) from partial, noisy, or corrupted observations:
 \begin{equation}
@@ -810,8 +811,12 @@ by computing the conditional estimate \(\hat{\vx}(\vy) = \Ex(\vx \mid
     such as conditioned image generation, rely heavily on this principle,
 as we will discuss in \Cref{ch:conditional-inference}.}
 
-These discussions lead to the single assumption on which this book
-bases its deductive approach to understanding intelligence and deep networks:
+Many prior works have studied the properties of data sets whose distributions 
+are supported on a low-dimensional surface or submanifold, e.g., 
+\cite{ALLARD2012435,LITTLE2017504}. We here would like to single out its
+ultimate importance and claims it as the single assumption on which this book
+bases its deductive approach to understanding deep networks and intelligence 
+in general:
 \begin{quote}
     \textbf{The main assumption:} \textit{Any intelligent system or
         learning method should (and can) rely on the predictability of

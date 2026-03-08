@@ -416,8 +416,7 @@ Intelligence）\cite{Turing-1950}中，图灵正式提出了
 进一步假设 \(f\) 是可高效计算的，并且具有良好的
 性质，如连续性和可微性。一旦我们理解了
 更精细的可计算性概念及其在机器学习和智能中的作用，
-这些性质的必要性
-在稍后就会变得清晰。
+这些性质的必要性在稍后就会变得清晰。
 
 \paragraph{多变量情况。}
 下一个值也可能依赖于两个前驱。例如，著名的
@@ -762,8 +761,15 @@ Low-Dimensional Models: Principles, Computation, and Applications}）
     如条件图像生成，严重依赖于这一原理，
 正如我们将在\Cref{ch:conditional-inference}中讨论的那样。}
 
-这些讨论引出了本书
-理解智能和深度网络的演绎方法所基于的唯一假设：
+Many prior works have studied the properties of data sets whose distributions 
+are supported on a low-dimensional surface or submanifold, e.g., 
+\cite{ALLARD2012435,LITTLE2017504}. We here would like to single out its
+ultimate importance and claims it as the single assumption on which this book
+bases its deductive approach to understanding deep networks and intelligence 
+in general:
+
+有不少以前的工作深入研究了以低维曲面或者低维流型为支撑的分布上的数据集的性质，比如\cite{ALLARD2012435,LITTLE2017504}。
+这里我们希望鲜明的指出低维结构无可比拟的重要性，认为它是我们通过演绎的方法理解深度网络甚至智能所需要的唯一假设：
 \begin{quote}
     \textbf{主要假设：}\textit{任何智能系统或
         学习方法都应该（并且能够）依赖于世界的
