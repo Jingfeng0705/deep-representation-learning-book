@@ -45,9 +45,8 @@
 然而，坦率地说，这里展示的解决方案和结果
 仅仅是为了验证该方法论的有效性。因此，
 无论是在理论理解还是实际工程方面，未来都有很大的改进空间，
-以进一步提升
-最先进的性能。我们将通过本章，特别是最后一节 \ref{sec:scalable}，展示一些直接且
-明显的改进。关于表征学习中可能更具变革性的想法，以及关于一般智能的遗留重大开放问题的讨论，我们将留待
+以进一步提升性能。我们将通过本章，特别是最后一节 \ref{sec:scalable}，展示一些直接且
+明显的改进。关于表征学习中可能更具变革性的想法，以及关于通用智能的重大开放问题的讨论，我们将留待
 最后的 \Cref{ch:future} 中作为未来研究的内容。
 
 \subsection{本章概要}
@@ -70,7 +69,7 @@
 
 显然，与自然语言相比，我们对
 物理数据（视觉和运动）的覆盖将更为广泛。
-尽管在过去几年中，人工智能行业在自然语言建模方面投入了大量资金，\footnote{包括其衍生形式，如编程语言、逻辑推演和数学证明。}人们已经开始意识到对
+尽管在过去几年中，人工智能行业在自然语言建模方面投入了大量资金\footnote{包括其衍生形式，如编程语言、逻辑推演和数学证明。}，人们已经开始意识到对
 物理世界及我们在其中的行为的知识进行建模的重要性。近年来，人们对开发所谓的“世界模型”、“空间智能”、“物理智能”或“具身智能”的兴趣迅速增长，注意力也随之转移，因为它们对于需要与开放的物理世界交互的AI系统或智能体（例如智能机器人）至关重要。正如我们在 \ref{ch:intro} 章中所了解到的，这正是诺伯特·维纳（Norbert Wiener）在20世纪40年代发起的{\em 控制论}（Cybernetics）项目的目标和范围。  
 
 在技术层面上，从 \Cref{sec:contrastive_learning} 到
@@ -223,7 +222,7 @@
 \section{图像表示的无监督
 学习}\label{sec:contrastive_learning}
 
-学习图像数据分布的高质量且忠实的表示
+学习图像数据分布的高质量且如实的表示
 是机器智能中的一个基本问题，正如我们
 在 \ref{ch:lossy-compression} 章中详细讨论的那样。
 在文献中，已经提出了许多针对此任务的流行方法，
@@ -272,7 +271,7 @@
     \label{fig:in1k_cifar10_examples}
 \end{figure}
 
-在稍微更正式的层面上，我们的数据 \(\vX\) 将是图像；我们
+在更正式的层面上，我们设图像数据为 \(\vX\)；我们
 设 \(\cI\) 为所有图像的集合。由于图像是一个矩形的
 像素阵列，并且每个像素都有由 RGB、CMYK 或
 其他颜色格式给出的颜色，我们说图像是 \(\R^{c
@@ -340,8 +339,8 @@ DINO \citep{caron2021emerging} 给出的答案是\footnote{在
 因此，最小化 \(d_{\CE}\) 会起到两个作用：它使得 \(\vp = \vq\)，
 并且它使得 \(\vp\) 和 \(\vq\) 具有最小的熵（即，
     在一个分量上为 \(1\) 而在其他地方为 \(0\) 的向量——这些被称为
-\textit{独热向量}（one-hot vectors））。总的来说，这个目标的意图不仅
-\textit{仅仅}是匹配 \(\vp\) 和 \(\vq\)，而且还要以某种方式塑造它们，
+\textit{独热向量}（one-hot vectors））。总的来说，这个目标的意图并非
+\textit{仅仅}是匹配 \(\vp\) 和 \(\vq\)，而是还要以某种方式塑造它们，
 使它们成为低熵的。在讨论公式时，
 请牢记这一点。
 
@@ -392,7 +391,7 @@ DINO 希望输入图像 \(\vX\) 的所有视图
     具有不同第二个参数值的两次 \(h\) 调用，
 我们保留了指定的符号。} \(h_{\vW, \vmu}\)（由矩阵 \(\vW \in \R^{s \times d}\) 和向量
 \(\vmu \in \R^{s}\) 参数化）来实现这一点，
-使用以下简单的配方从聚合特征 \(\vz_{\theta}(\vX_{v})\) 中
+使用以下简单的方法从聚合特征 \(\vz_{\theta}(\vX_{v})\) 中
 提取概率向量 \(\vp_{\theta,
 \vW, \vmu}(\vX_{v}) \doteq h_{\vW, \vmu}(\vz_{\theta}(\vX_{v}))\)：
 \begin{equation}
@@ -465,7 +464,7 @@ v_{g}(\vX)\) 的概率向量 \(\vp_{\theta, \vW, \vmu}(\vX_{g}) \doteq h_{\vW,
 交叉熵分数更高效。因此，在我们的简化中，
 \(d_{\ell^{2}}\) 取代了 \(d_{\CE}\)。
 
-以前，通过使用技巧更新 \(\vmu\) 和 \(\tau\) 来避免崩溃。
+以前，DINO通过使用技巧更新 \(\vmu\) 和 \(\tau\) 来避免崩溃。
 在我们的简化中，如果我们在表示空间内比较特征，
 而不是将它们转换为概率，
 我们就没有这两个参数，因此必须考虑一种
@@ -487,9 +486,9 @@ v_{g}(\vX)\) 的概率向量 \(\vp_{\theta, \vW, \vmu}(\vX_{g}) \doteq h_{\vW,
     \vz_{\theta}(\vX_{c}))] - \frac{\gamma}{2}\log\det\rp{\vI +
     \frac{d}{\eps^{2}}\Cov(\vz_{\theta}(\vX_{g}))},
 \end{equation}
-其中 \(\eps > 0\) 是固定的，并且适当的期望与
-之前一样，是针对数据 \(\vX\)、全局视图 \(v_{g}\) 和其他
-（局部或全局）视图 \(v_{c}\) 计算的。\eqref{eq:simdino_loss} 中的损失
+其中 \(\eps > 0\) 是固定的，并且与
+之前一样，我们针对数据 \(\vX\)、全局视图 \(v_{g}\) 和其他
+（局部或全局）视图 \(v_{c}\) 计算期望。\eqref{eq:simdino_loss} 中的损失
 本质上与 \ref{ch:lossy-compression} 章 \ref{sec:SimDINO} 节中为
 简化的 DINO（“SimDINO”）引入的损失相同。
 正如我们将看到的，如果实现得当，它的效果至少
@@ -498,7 +497,7 @@ v_{g}(\vX)\) 的概率向量 \(\vp_{\theta, \vW, \vmu}(\vX_{g}) \doteq h_{\vW,
 \subsection{架构：视觉
 Transformer}\label{sub:contrastive_learning_architecture}
 
-对于架构，我们使用标准的视觉 Transformer。以下是
+对于架构，我们使用标准的视觉 Transformer (Vision Transformer, 简称为 ViT)。以下是
 这种架构在图像数据背景下的正式工作原理。
 回顾 \Cref{sec:experiment_setup}，编码器架构有四个
 组件，即嵌入、
@@ -576,8 +575,8 @@ Transformer}\label{sub:contrastive_learning_architecture}
             \item \(\vE^{\pos} \in \R^{d \times N}\) 是一个所谓的
                 \textit{位置编码}（positional encoding），它将
                 不同图块的 token 区分开来。也就是说，
-                token 特征应该具有位置信息，以便
-                整体映射 \(f^{\pre}\) 对图块的排列不是不变的，
+                token 特征应该具有位置信息，使得
+                整体映射 \(f^{\pre}\) 不具有对各个图块排列置换的不变性，
                 而 \(\vE^{\pos}\)
                 插入了这种位置信息。
                 \begin{itemize}
@@ -801,7 +800,7 @@ DINO 的优化策略对\textit{同一架构使用两组权重}：
             \vzero_{m}}(\vz_{\theta_{\student}}(\vX_{b, \ell}^{(k), i}(\theta)))
         \end{equation}
         并且对于每个 \textit{全局} 视图 \(\vX_{b, g}^{(k), i}\)，
-        计算以下量（滥用符号）：
+        计算以下量（注:此处符号使用不严格）：
         \begin{align}
             &\vz_{\theta_{\student}}(\vX_{b, g}^{(k), i}) \doteq
             (f_{\theta_{\student}}^{\ext} \circ
@@ -905,8 +904,8 @@ DINO 的优化策略对\textit{同一架构使用两组权重}：
     训练更加稳定。}\label{fig:simdino_pipeline}
 \end{figure}
 
-\paragraph{优化 SimDINO。} 简化的 DINO 总体级别
-目标在精神上非常相似，但在执行上要简单得多，即，
+\paragraph{优化 SimDINO。} SimDINO 的总体
+目标与原DINO方法理念相近，但在执行上要简单得多，即，
 \begin{equation}\label{eq:simdino_loss_teacherstudent}
     \cL_{\simdino-\student\teacher}(\theta_{\student}, \theta_{\teacher}) \doteq
     \Ex\rs{d_{\ell^{2}}(\vz_{\theta_{\teacher}}(\vX_{g}),
