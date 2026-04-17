@@ -478,7 +478,7 @@ $$\circm(\bm Z^2) = \big[ \circm( \bm z_{1}^1 + \eta g( \bm z_{1}^1,
     \label{eqn:lift-1d}
 \end{equation}
 这些滤波器可以是预先设计的促进不变性的滤波器，\footnote{对于像音频这样的 1D 信号，可以考虑传统的短时傅里叶变换 (STFT)；对于 2D 图像，可以考虑像 ScatteringNet \cite{scattering-net} 中那样的 2D 小波。} 或者是从数据中自适应学习的，\footnote{对于学习到的滤波器，可以像 PCANet \cite{chan2015pcanet} 中那样将滤波器学习为样本的主成分，或者从卷积字典学习 \cite{li2019multichannel,qu2019nonconvex} 中学习。} 或者是像我们在实验中所做的那样随机选择的。此操作将每个原始信号 $\x \in \Re^d$ 提升为 $C$ 通道特征，记为 $\bar{\z}  \doteq
-[\z[1], \ldots, \z[C]]^\top \in \Re^{C\times d}$。然后，我们可以在 $\bar{\z}$ 的向量表示上构建 ReduNet，记为 $\vec(\bar\z) \doteq [\z[1]^\top, \ldots, \z[C]^\top] \in \Re^{dC}$。相关的循环版本 $ \circm(\bar{\z})$ 及其数据协方差矩阵（记为 $\bar{\bm \Sigma}(\bar\z)$）对于其所有平移版本给出如下：
+[\z[1], \ldots, \z[C]]^\top \in \Re^{C\times d}$。然后，我们可以在 $\bar{\z}$ 的向量表示上构建 ReduNet，记为 $\vec(\bar\z) \doteq [\z[1]^\top, \ldots, \z[C]^\top] \in \Re^{dC}$。对应的循环版本 $ \circm(\bar{\z})$ 及其数据协方差矩阵（记为 $\bar{\bm \Sigma}(\bar\z)$）对于其所有平移版本给出如下：
 \begin{equation}
     \begin{aligned}
         \circm(\bar{\z}) &\doteq \left[
@@ -644,7 +644,7 @@ $$\circm(\bm Z^2) = \big[ \circm( \bm z_{1}^1 + \eta g( \bm z_{1}^1,
             \includegraphics[width=\textwidth]{\toplevelprefix/chapters/chapter5/figs/mnist1d-loss-traintest.pdf}
             \caption{损失}
         \end{subfigure}
-        \caption{\small (a)(b) 是旋转训练数据 $\bm{X}_{\text{rotation}}$ 和学习到的旋转不变特征 $\bar{\bm{Z}}_{\text{rotation}}$ 之间余弦相似度的热力图。(d) 可视化了跨层的训练/验证 MCR$^2$ 损失。}
+        \caption{\small (a)(b) 是旋转训练数据 $\bm{X}_{\text{rotation}}$ 和学习到的旋转不变特征 $\bar{\bm{Z}}_{\text{rotation}}$ 之间余弦相似度的热力图。(c) 可视化了跨层的训练/验证 MCR$^2$ 损失。}
         \label{fig:redu-invariant-1d-mnist-diagram}
     \end{figure}
 
@@ -707,7 +707,7 @@ $$\circm(\bm Z^2) = \big[ \circm( \bm z_{1}^1 + \eta g( \bm z_{1}^1,
     \label{fig:sparse-rate-reduction-diagram}
 \end{figure}
 
-\paragraph{稀疏率衰减。} 请注意，率衰减目标 \eqref{eq:rate reduction} 对表示和子空间的任意联合旋转是不变的。特别是，优化率衰减目标可能不会自然地导致轴对齐（即\textit{稀疏}）的表示。{例如，考虑 \Cref{fig:sparse-rate-reduction-diagram} 中学习到的三组表示。编码率衰减从 (a) 到 (b) 增加，但由于它在旋转下是不变的，因此从 (b) 到 (c) 保持不变。} 因此，我们希望对表示（及其支撑子空间）进行变换，使得表示 $\vZ$ 最终相对于所得表示空间的标准坐标变得稀疏\footnote{具体而言，具有很少的非零项。}{如 \Cref{fig:sparse-rate-reduction-diagram}(c) 所示}。因此，为了确保最终表示易于进行更紧凑的编码，我们希望对表示（及其支撑子空间）进行变换，使它们相对于所得表示空间的标准坐标变得\textit{稀疏}。\footnote{也就是说，具有最少的非零项。}
+\paragraph{稀疏率衰减。} 请注意，率衰减目标 \eqref{eq:rate reduction} 对表示和子空间的任意联合旋转是不变的。特别是，优化率衰减目标可能不会自然地得到轴对齐（即\textit{稀疏}）的表示。{例如，考虑 \Cref{fig:sparse-rate-reduction-diagram} 中学习到的三组表示。编码率衰减从 (a) 到 (b) 增加，但由于它在旋转下是不变的，因此从 (b) 到 (c) 保持不变。} 因此，我们希望对表示（及其支撑子空间）进行变换，使得表示 $\vZ$ 最终相对于所得表示空间的标准坐标变得稀疏\footnote{具体而言，具有很少的非零项。}{如 \Cref{fig:sparse-rate-reduction-diagram}(c) 所示}。因此，为了确保最终表示易于进行更紧凑的编码，我们希望对表示（及其支撑子空间）进行变换，使它们相对于所得表示空间的标准坐标变得\textit{稀疏}。\footnote{也就是说，具有最少的非零项。}
 在计算上，我们可以将上述两个目标结合成一个统一的优化目标：
 \begin{equation}
     \max_{f \in \mathcal{F}}\ [\Delta R_{\epsilon}(\Z \mid \vU_{[K]})
@@ -901,7 +901,7 @@ $$\circm(\bm Z^2) = \big[ \circm( \bm z_{1}^1 + \eta g( \bm z_{1}^1,
 
 \begin{table*}[t!]
     \centering
-    \caption{\small 在 ImageNet-1K 上预训练时，\textsc{crate} 在具有不同模型规模的各种数据集上的 Top-1 分类准确率。对于 ImageNet-1K/ImageNet-1K ReaL，我们直接评估 top-1 准确率。对于其他数据集，我们使用在 ImageNet 上预训练的模型作为初始化，并通过微调评估迁移学习性能。}
+    \caption{\small 在 ImageNet-1K 上预训练时，\textsc{CRATE} 在具有不同模型规模的各种数据集上的 Top-1 分类准确率。对于 ImageNet-1K/ImageNet-1K ReaL，我们直接评估 top-1 准确率。对于其他数据集，我们使用在 ImageNet 上预训练的模型作为初始化，并通过微调评估迁移学习性能。}
     \label{tab:crate_comparison_with_sota}
     \small
     \setlength{\tabcolsep}{13.6pt}
@@ -937,7 +937,7 @@ $$\circm(\bm Z^2) = \big[ \circm( \bm z_{1}^1 + \eta g( \bm z_{1}^1,
 \section{通过设计得到的深度架构变体}
 \label{sec:chap4-derive-white-box-transformer-variants}
 
-到目前为止，我们希望我们已经提供了令人信服的证据，证明（流行的）深度网络的作用是实现某些优化算法，以最小化学习表示的编码率（或最大化信息增益）。然而，熟悉优化方法的读者可能已经注意到，上述架构（ReduNet 或 CRATE）对应于相当基础的优化技术。它们在效率或有效性方面可能有很大的改进空间。此外，如果我们相信所提出的用于解释深度网络的理论框架是正确的，那么它不仅应该有助于解释现有的架构，还应该指导我们开发更高效、更有效的架构。在本节中，我们展示了情况可能确实如此：由此产生的新架构不仅完全可解释，而且具有保证的正确性和提高的效率。
+到目前为止，我们希望我们已经提供了令人信服的证据，证明（流行的）深度网络的作用是实现某些优化算法，以最小化学习表示的编码率（或最大化信息增益）。然而，熟悉优化方法的读者可能已经注意到，上述架构（ReduNet 或 CRATE）对应于相当基础的优化技术。它们在效率或有效性方面可能有很大的改进空间。此外，如果我们相信所提出的用于解释深度网络的理论框架是正确的，那么它不仅应该有助于解释现有的架构，还应该指导我们开发更高效、更有效的架构。在本节中，我们展示了情况可能确实如此：由此产生的新架构不仅完全可解释，而且具有正确性保证并提升了效率。
 
 \subsection{纯注意力 Transformer 架构} \label{sub:aot}
 
