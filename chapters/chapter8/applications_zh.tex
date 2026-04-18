@@ -1370,13 +1370,13 @@ ResNet & 101 & 93.0 & 77.2 & 84.4 & 75.8 \\
 
 \subsection{简化扩展：LIFT}\label{sub:follow-up}
 
-尽管有效，但 CLIP 范式有着几个局限性。首先，从零开始共同训练文本编码器和图像编码器的计算成本很高，通常需要极大的批量和海量数据集才能达到高质量的跨模态对齐和下游任务迁移。其次，以这种方式训练的模型可能在组合语义理解（compositional understanding）方面遇到困难，例如难以捕获文本中的词序、图像中的空间布局以及对象-属性或对象-对象关系。文献证明，一个潜在原因是 CLIP 的对比学习方法会奖励图像表示提取图像全局信息，而同时忽略图像不同细部之间的关系。LIFT（Language–Image alignment with a Fixed Text encoder）~\citep{yang2025languageimagealignmentfixedtext} 重新审视了 CLIP 背后的一个核心假设：最佳对齐需要两个编码器的tong端到端训练。相反，LIFT 利用了现代大型语言模型（LLM）已经产生高度信息化的文本嵌入这一观察结果。具体而言，LIFT 固定了一个强大的预训练文本编码器（例如，源自 LLM 或在 LLM 上微调的编码器），离线计算文本嵌入，并仅训练图像编码器以对齐这些固定目标。
+尽管有效，但 CLIP 范式有着几个局限性。首先，从零开始共同训练文本编码器和图像编码器的计算成本很高，通常需要极大的批量和海量数据集才能达到高质量的跨模态对齐和下游任务迁移。其次，以这种方式训练的模型可能在组合语义理解（compositional understanding）方面遇到困难，例如难以捕获文本中的词序、图像中的空间布局以及对象-属性或对象-对象关系。文献证明，一个潜在原因是 CLIP 的对比学习方法会奖励图像表示提取图像全局信息，而同时忽略图像不同细部之间的关系。LIFT（Language–Image alignment with a Fixed Text encoder）~\citep{yang2025languageimagealignmentfixedtext} 重新审视了 CLIP 背后的一个核心假设：最佳对齐需要同时端到端训练两个编码器。与 CLIP 不同的是，LIFT 利用了现代大型语言模型（LLM）已经产生的高度信息化文本表示。具体而言，LIFT 固定了一个强大的预训练文本编码器（例如，源自 LLM 或在 LLM 上微调的编码器），离线计算文本表示，并仅训练图像编码器。
 
 \paragraph{架构。}
-LIFT 保留了与 CLIP 相同的双塔公式，即视觉编码器和文本编码器映射到共享的潜在空间，但关键区别在于文本塔是\emph{固定的}，并且可以由任何强大的基于 LLM 的文本编码器 \(g_{\plainphi}:\cT\to\R^{d}\) 实例化以生成文本嵌入，其中 \(\plainphi\) 在训练期间不更新。在我们的实现中，我们采用 NV-Embed-V2 文本编码器，其嵌入维度为 \(d=4096\)。由于文本塔 \(g_{\plainphi}\) 是固定的，我们可以离线预计算所有文本嵌入 \(\{g_{\plainphi}(\vT)\}\)，并在训练期间仅在线计算梯度并更新图像编码器 \(f_{\theta}\)。图像塔 \(f_{\theta}:\cI\to\R^{d}\) 遵循与 \Cref{sub:clip_vision_tower} 中相同的结构，投影头输出维度设置为 \(d\)，以匹配固定文本嵌入空间的维度。除了固定 \(g_{\plainphi}\) 和匹配投影维度外，其余组件（包括对比损失和优化过程）遵循与 CLIP 相同的设计原则。
+LIFT 保留了与 CLIP 相同的双塔结构，即视觉编码器和文本编码器映射到共享的潜在空间，但关键区别在于文本塔是\emph{固定的}，可以使用任何基于 LLM 的文本编码器 \(g_{\plainphi}:\cT\to\R^{d}\) ，其中 \(\plainphi\) 在训练期间不更新。在我们的实现中，我们采用 NV-Embed-V2 文本编码器，其文本表示维度为 \(d=4096\)。由于文本塔 \(g_{\plainphi}\) 是固定的，我们可以离线预计算所有文本表示 \(\{g_{\plainphi}(\vT)\}\)，并在训练期间仅在线计算梯度并更新图像编码器 \(f_{\theta}\)。图像塔 \(f_{\theta}:\cI\to\R^{d}\) 遵循与 \Cref{sub:clip_vision_tower} 中相同的结构，投影头输出维度设置为 \(d\)，以匹配固定文本表示的潜在空间维度。除了固定 \(g_{\plainphi}\) 和匹配图像投影维度外，其余组件（包括对比损失和优化过程）均遵循与 CLIP 相同的设计原则。
 
 \paragraph{评估方法。} 
-组合理解是 CLIP 的一个已知局限性。我们在七个 SugarCrepe~\citep{hsieh2023sugarcrepe} 任务上评估 LIFT 和 CLIP，其中每张图像 \(\vX\) 都配有一个\emph{正样本}（正确）标题 \(\vT_{\text{pos}}\) 和一个\emph{负样本}标题 \(\vT_{\text{neg}}\)，后者是通过添加、替换或交换 \(\vT_{\text{pos}}\) 中的对象、属性或关系构建的。一些示例见图 \ref{fig:SugarCrepe-examples}。模型被要求通过比较标题-图像的余弦相似度来识别正确的标题。形式上，对于每个样本 \(i\in\{1,\dots,N\}\)，我们计算归一化嵌入：
+组合语义理解是 CLIP 的一个已知局限性。我们在七个聚焦组合语义理解的 SugarCrepe~\citep{hsieh2023sugarcrepe} 任务上评估 LIFT 和 CLIP，其中每张图像 \(\vX\) 都配有一个\emph{正样本}（正确）标题 \(\vT_{\text{pos}}\) 和一个\emph{负样本}标题 \(\vT_{\text{neg}}\)，后者是通过添加、替换或交换 \(\vT_{\text{pos}}\) 中的对象、属性或关系构建的。一些示例见图 \ref{fig:SugarCrepe-examples}。模型被要求通过比较图像-标题的余弦相似度来识别正确的标题。形式上，对于每个样本 \(i\in\{1,\dots,N\}\)，我们计算归一化表示：
 \[
 \vz_i^{I} \doteq \frac{f_{\theta}(\vX_i)}{\|f_{\theta}(\vX_i)\|_2},\qquad
 \vz_{i,\text{pos}}^{T} \doteq \frac{g_{\plainphi}(\vT_{i,\text{pos}})}{\|g_{\plainphi}(\vT_{i,\text{pos}})\|_2},\qquad
@@ -1396,12 +1396,12 @@ s_{i,\text{neg}} \doteq \langle \vz_i^{I}, \vz_{i,\text{neg}}^{T} \rangle.
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{\toplevelprefix/chapters/chapter8/figs/negative_caption_demo.pdf}
-\caption{来自两个 SugarCrepe 任务的原始标题（顶部）及其负样本对应物（底部）：\texttt{replace relation}（左）和 \texttt{swap attribute}（右）。}
+\caption{来自两个 SugarCrepe 任务的原始正确标题（顶部）及其对应的负样本标题（底部）：\texttt{replace relation}（左）和 \texttt{swap attribute}（右）。}
 \label{fig:SugarCrepe-examples}
 \end{figure}
 
 \paragraph{实验结果。}
-如 \Cref{tab:Compositionality} 所示，当在 DataComp-1B 上训练时，LIFT 在所有七个任务上均优于 CLIP，平均准确率提高了 \textbf{6.8\%}。LIFT 在 \texttt{add attribute}、\texttt{replace attribute} 和 \texttt{replace relation} 任务上取得了显著的收益。这些改进有力地证明了基于 LLM 的文本编码器 \(g_{\plainphi}\) 捕获了更具信息量的文本表示，从而能够更准确地建模对象-属性关联和对象-对象关系。另一方面，我们可以看到，与其他 SugarCrepe 任务相比，LIFT 在 \texttt{swap object} 和 \texttt{swap attribute} 上的准确率相对较低。我们将此局限性归因于对比学习目标，该目标主要侧重于对齐低阶统计量。应对这一挑战需要探索更精细的语言-图像对齐信息论度量，这是未来工作的一个关键方向。
+如 \Cref{tab:Compositionality} 所示，当在 DataComp-1B 数据集上训练时，LIFT 在所有七个任务上均优于 CLIP，平均准确率提高了 \textbf{6.8\%}。LIFT 在 \texttt{add attribute}、\texttt{replace attribute} 和 \texttt{replace relation} 任务上取得了显著的收益，有力地证明了基于 LLM 的文本编码器 \(g_{\plainphi}\) 捕获了更具信息量的文本表示，从而能够更准确地建模对象-属性关联和对象-对象关系。另一方面，我们可以看到，与其他 SugarCrepe 任务相比，LIFT 在 \texttt{swap object} 和 \texttt{swap attribute} 上的准确率相对较低。我们将此局限性归因于对比学习目标，该目标主要侧重于对齐低阶统计量。应对这一挑战需要从信息论视角探索更精细的图像-文本对齐度量，这是未来工作的一个关键方向。
 
 \begin{table}[t]
 \centering
@@ -1409,14 +1409,14 @@ s_{i,\text{neg}} \doteq \langle \vz_i^{I}, \vz_{i,\text{neg}}^{T} \rangle.
 \begin{tabular}{@{}lllccccccc@{}}
 \toprule
 & & & \multicolumn{2}{c}{添加} & \multicolumn{3}{c}{替换} & \multicolumn{2}{c}{交换} \\
-方法 & 数据集 & 见过样本数 & 对象 & 属性 & 对象 & 属性 & 关系 & 对象 & 属性 \\
+方法 & 数据集 & 训练样本数 & 对象 & 属性 & 对象 & 属性 & 关系 & 对象 & 属性 \\
 \midrule
 OpenCLIP & DataComp & 1.28B & 82.3 & 73.7 & 91.7 & 79.4 & 61.2 & 59.6 & 56.9 \\
 LIFT     & DataComp & 1.28B & \textbf{89.0} & \textbf{86.1} & \textbf{93.2} & \textbf{86.0} & \textbf{70.6} & \textbf{64.1} & \textbf{63.4} \\
 \bottomrule
 \end{tabular}%
 }
-\caption{LIFT 和 CLIP 在七个 SugarCrepe 任务上的性能。我们使用开源的 CLIP 实现 OpenCLIP~\citep{ilharco_gabriel_2021_5143773}，并在开源文本-图像对数据集 DataComp~\citep{gadre2023datacompsearchgenerationmultimodal} 上训练 OpenCLIP 和 LIFT。我们报告了每个任务的准确率，最佳结果以粗体显示。}
+\caption{LIFT 和 CLIP 在七个 SugarCrepe 任务上的性能。我们使用开源的 OpenCLIP~\citep{ilharco_gabriel_2021_5143773} 项目复现 CLIP 模型，并在开源图像-文本对数据集 DataComp~\citep{gadre2023datacompsearchgenerationmultimodal} 上训练 OpenCLIP 和 LIFT。我们报告了每个任务的准确率，胜出结果以粗体显示。}
 \label{tab:Compositionality}
 \end{table}
 
